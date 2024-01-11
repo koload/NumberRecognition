@@ -1,7 +1,7 @@
 import pygame
 import sys
 
-"""dsfsdftest"""
+"""TEST godz 14:21"""
 
 pygame.init()
 
