@@ -1,7 +1,7 @@
 import pygame
 import sys
 
-"""TEST godz 14:21"""
+"""TEST godz 14:21d"""
 
 pygame.init()
 
