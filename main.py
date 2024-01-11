@@ -1,6 +1,7 @@
 import pygame
 import sys
 
+"""test 11.1"""
 
 def process_coordinates(x, y):
     print(x, y)
