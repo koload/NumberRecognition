@@ -1,6 +1,11 @@
 import pygame
 import sys
 
+pygame.init()
+
+# Colors
+black = (0, 0, 0)
+white = (255, 255, 255)
 
 def process_coordinates(x, y):
     print(x, y)
@@ -18,16 +23,116 @@ def display_message(message):
     screen.blit(message_text, (width // 2 - message_text.get_width() // 2, height - 40))
     pygame.display.flip()
 
+def calculate_grid_data(left_top, side_length, rows, cols):
+    cell_width = side_length / cols
+    cell_height = side_length / rows
+
+    print(f"Calculated cell_width: {cell_width}, cell_height: {cell_height}")
+
+    grid_info = {
+        'cell_width': cell_width,
+        'cell_height': cell_height,
+        'grid_points': []
+    }
+
+    for i in range(rows):
+        row_points = []
+        for j in range(cols):
+            left = left_top[0] + j * cell_width
+            top = left_top[1] + i * cell_height
+            right = left + cell_width
+            bottom = top + cell_height
+
+            print(f"Generating points for cell ({i}, {j}): ({left}, {top}) - ({right}, {bottom})")
+            row_points.append(((left, top), (right, bottom)))
+
+        grid_info['grid_points'].append(row_points)
+
+    return grid_info
+
+
+def generate_grid_points(inner_screen, grid_info, color):
+    for row in grid_info['grid_points']:
+        for points in row:
+            print(f"Drawing rectangle: {points}")
+            pygame.draw.rect(inner_screen, color, points, 1)
+
+    pygame.display.flip()
+
+    return grid_info
+
+def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_points):
+    cell_width = side_length // cols
+    cell_height = side_length // rows
+
+    for row in range(rows - 1):
+        y = left_top[1] + (row + 1) * cell_height
+        pygame.draw.line(surface, color, (left_top[0], y), (left_top[0] + side_length, y), 1)
+
+    for col in range(cols - 1):
+        x = left_top[0] + (col + 1) * cell_width
+        pygame.draw.line(surface, color, (x, left_top[1]), (x, left_top[1] + side_length), 1)
+
+    # Koloruj pola wewnątrz siatki na fioletowo, jeżeli zawierają biały punkt
+    for row in range(rows):
+        for col in range(cols):
+            print(f"Checking cell {row}, {col}")
+            cell_rect = pygame.Rect(left_top[0] + col * cell_width, left_top[1] + row * cell_height,
+                                    cell_width, cell_height)
+            print(f"Cell rect: {cell_rect}")
+
+            if is_white_in_cell(surface, cell_rect):
+                print(f"Coloring cell {row}, {col} in purple.")
+                pygame.draw.rect(surface, (169, 169, 169), cell_rect)
+
+def is_white_in_cell(surface, cell_rect):
+    # Iteracja po wszystkich pikselach wewnątrz komórki
+    for y in range(cell_rect.top, cell_rect.bottom):
+        for x in range(cell_rect.left, cell_rect.right):
+            pixel_color = surface.get_at((x, y))
+            # Sprawdzenie, czy kolor piksela jest biały
+            if pixel_color == (255, 255, 255, 255):
+                return True  # Znaleziono biały piksel w komórce
+    return False  # Brak białego piksela w komórce
 
 def confirm_number():
-    display_message("Twoja liczba została zatwierdzona")
+    white_points = []
+    for y in range(drawing_area_rect.top, drawing_area_rect.bottom):
+        for x in range(drawing_area_rect.left, drawing_area_rect.right):
+            pixel_color = screen.get_at((x, y))
+            if pixel_color == (255, 255, 255):
+                white_points.append((x, y))
+
+    if white_points:
+        min_x = min(white_points, key=lambda point: point[0])[0]
+        max_x = max(white_points, key=lambda point: point[0])[0]
+        min_y = min(white_points, key=lambda point: point[1])[1]
+        max_y = max(white_points, key=lambda point: point[1])[1]
+
+        center_x = (min_x + max_x) // 2
+        center_y = (min_y + max_y) // 2
+
+        side_length = max(max_x - min_x, max_y - min_y)
+
+        pygame.draw.rect(screen, (0, 0, 255), (min_x, min_y, max_x - min_x, max_y - min_y), 2)
+        pygame.draw.circle(screen, (255, 0, 0), (center_x, center_y), 5)
+        pygame.draw.rect(screen, (255, 0, 0),
+                         (center_x - side_length // 2, center_y - side_length // 2, side_length, side_length), 2)
+
+        grid_rows = 8
+        grid_cols = 8
+        grid_info = calculate_grid_data((center_x - (side_length / 2), center_y - (side_length / 2)), side_length,
+                                        grid_rows, grid_cols)
+        #generate_grid_points(screen, grid_info, (169, 169, 169))
+        draw_internal_grid(screen, (center_x - (side_length / 2), center_y - (side_length / 2)), side_length, grid_rows,
+                           grid_cols, (169, 169, 169), white_points)
+
+        display_message(f"Twoja liczba została zatwierdzona")
+
+    else:
+        display_message("Brak punktów do zatwierdzenia")
 
 
-pygame.init()
-
-# Colors
-black = (0, 0, 0)
-white = (255, 255, 255)
 
 # Display
 width, height = 800, 600
