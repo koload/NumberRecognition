@@ -1,6 +1,8 @@
 import pygame
 import sys
 
+"""test"""
+
 pygame.init()
 
 # Colors
