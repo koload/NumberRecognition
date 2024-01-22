@@ -1,30 +1,80 @@
 import pygame
 import sys
+from pygame_gui import UIManager, elements
 
-"""TEST godz 14:21d"""
+#Pamiętaj o:    pip install pygame_gui
 
 pygame.init()
+
+trial_number = 0
+user_value = None
+input_text = ""
 
 # Colors
 black = (0, 0, 0)
 white = (255, 255, 255)
 
+# Display
+width, height = 800, 800
+icon = pygame.image.load('Number_sign.png')
+
+screen = pygame.display.set_mode((width, height))
+screen.fill(black)
+pygame.display.set_caption("Number Recognition")
+pygame.display.set_icon(icon)
+
+# Inicjalizacja pygame_gui
+manager = UIManager((width, height))
+
+# Przykładowy element wprowadzania tekstu
+text_input_rect = pygame.Rect((75, height - 150), (200, 35))
+text_input = elements.UITextEntryLine(relative_rect=text_input_rect, manager=manager)
+
+# Przycisk "Zatwierdź"
+confirm_button_rect = pygame.Rect((75, height - 100), (100, 50))
+confirm_button = elements.UIButton(relative_rect=confirm_button_rect, text='Zatwierdź', manager=manager)
+
+# Przycisk "Wyczyść"
+clear_button_rect = pygame.Rect((width - 175, height - 100), (100, 50))
+clear_button = elements.UIButton(relative_rect=clear_button_rect, text='Wyczysc', manager=manager)
+
+# Label do wyświetlania komunikatów
+message_label_rect = pygame.Rect((width - 350, height - 150), (400, 50))
+message_label = elements.UILabel(relative_rect=message_label_rect, text='', manager=manager)
+
+
+# Drawing variables
+drawing = False
+last_pos = None
+
+# Button variables
+#button_rect = pygame.Rect(50, height - 70, 100, 50)
+#clear_button_rect = pygame.Rect(width - 150, height - 70, 100, 50)
+
+# Drawing area rectangle
+drawing_area_rect = pygame.Rect(0, 0, width, height - 200)
+
+
+
+
+#Funkcja przetwarzająca współrzędne myszy.
 def process_coordinates(x, y):
     print(x, y)
 
-
+#Funkcja resetująca ekran, czyści ekran i odświeża.
 def screen_reset():
     screen.fill(black)
     pygame.display.flip()
     """Dodac zerowanie matrycy"""
 
-
+#Funkcja wyświetlająca komunikat na dole ekranu.
 def display_message(message):
     message_font = pygame.font.Font(None, 36)
     message_text = message_font.render(message, True, white)
     screen.blit(message_text, (width // 2 - message_text.get_width() // 2, height - 40))
     pygame.display.flip()
 
+#Funkcja obliczająca informacje o siatce na podstawie parametrów.
 def calculate_grid_data(left_top, side_length, rows, cols):
     cell_width = side_length / cols
     cell_height = side_length / rows
@@ -52,7 +102,7 @@ def calculate_grid_data(left_top, side_length, rows, cols):
 
     return grid_info
 
-
+#Funkcja rysująca siatkę punktów na ekranie.
 def generate_grid_points(inner_screen, grid_info, color):
     for row in grid_info['grid_points']:
         for points in row:
@@ -63,19 +113,21 @@ def generate_grid_points(inner_screen, grid_info, color):
 
     return grid_info
 
+#Funkcja kolorowania wewnętrznych kwadratów (rysująca wewnętrzną siatkę i kolorująca pola z białymi punktami.)
 def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_points):
     cell_width = side_length // cols
     cell_height = side_length // rows
 
-    for row in range(rows - 1):
-        y = left_top[1] + (row + 1) * cell_height
-        pygame.draw.line(surface, color, (left_top[0], y), (left_top[0] + side_length, y), 1)
+    # Lista do przechowywania informacji o każdym kwadracie
+    grid_data = []
 
-    for col in range(cols - 1):
-        x = left_top[0] + (col + 1) * cell_width
-        pygame.draw.line(surface, color, (x, left_top[1]), (x, left_top[1] + side_length), 1)
+    global trial_number
+    trial_number += 1
+    global user_value
 
-    # Koloruj pola wewnątrz siatki na fioletowo, jeżeli zawierają biały punkt
+    # Dodanie numeru próby i wartości użytkownika do listy
+    grid_data.extend([trial_number, user_value])
+
     for row in range(rows):
         for col in range(cols):
             print(f"Checking cell {row}, {col}")
@@ -83,10 +135,23 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
                                     cell_width, cell_height)
             print(f"Cell rect: {cell_rect}")
 
-            if is_white_in_cell(surface, cell_rect):
-                print(f"Coloring cell {row}, {col} in purple.")
+            # Sprawdzenie, czy w komórce znajdują się białe piksele
+            is_white = is_white_in_cell(surface, cell_rect)
+
+            # Dodanie informacji o białych pikselach do listy
+            grid_data.append(1 if is_white else 0)
+
+            # Pomalowanie kwadratu na szaro, jeśli zawiera białe piksele
+            if is_white:
                 pygame.draw.rect(surface, (169, 169, 169), cell_rect)
 
+    # Zapisanie informacji o białych pikselach do pliku
+    save_grid_data('dates.csv', grid_data)
+
+    # Aktualizacja ekranu
+    pygame.display.flip()
+
+#Funkcja sprawdzająca, czy w komórce znajduje się biały punkt.
 def is_white_in_cell(surface, cell_rect):
     # Iteracja po wszystkich pikselach wewnątrz komórki
     for y in range(cell_rect.top, cell_rect.bottom):
@@ -97,6 +162,14 @@ def is_white_in_cell(surface, cell_rect):
                 return True  # Znaleziono biały piksel w komórce
     return False  # Brak białego piksela w komórce
 
+#Funkcja zapisująca informacje o białych pikselach do pliku CSV.
+def save_grid_data(output_file, grid_data):
+    with open(output_file, 'a') as file:
+        # Konwersja danych do postaci string i zapisanie do pliku
+        line = ','.join(map(str, grid_data)) + '\n'
+        file.write(line)
+
+#Funkcja potwierdzająca liczbę na podstawie białych punktów.
 def confirm_number():
     white_points = []
     for y in range(drawing_area_rect.top, drawing_area_rect.bottom):
@@ -129,39 +202,25 @@ def confirm_number():
         draw_internal_grid(screen, (center_x - (side_length / 2), center_y - (side_length / 2)), side_length, grid_rows,
                            grid_cols, (169, 169, 169), white_points)
 
-        display_message(f"Twoja liczba została zatwierdzona")
+        #display_message(f"Twoja liczba została zatwierdzona")
+        message_label.set_text("Twoja liczba została zatwierdzona")
 
     else:
-        display_message("Brak punktów do zatwierdzenia")
+        #display_message("Brak punktów do zatwierdzenia")
+        message_label.set_text("Brak punktów do zatwierdzenia")
 
-
-
-# Display
-width, height = 800, 600
-icon = pygame.image.load('Number_sign.png')
-
-screen = pygame.display.set_mode((width, height))
-screen.fill(black)
-pygame.display.set_caption("Number Recognition")
-pygame.display.set_icon(icon)
-
-# Drawing variables
-drawing = False
-last_pos = None
-
-# Button variables
-button_rect = pygame.Rect(50, height - 70, 100, 50)
-clear_button_rect = pygame.Rect(width - 150, height - 70, 100, 50)
-
-# Drawing area rectangle
-drawing_area_rect = pygame.Rect(0, 0, width, height - 70)
 
 # Main loop
 while True:
+    time_delta = pygame.time.Clock().tick(60) / 1000.0  # Obliczenie delta czasu tylko raz
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
+        # Pobierz aktualne zdarzenia
+        events = pygame.event.get()
 
         # Sprawdzenie, czy kursor myszy znajduje się w obszarze rysowania
         if drawing_area_rect.collidepoint(pygame.mouse.get_pos()):
@@ -190,29 +249,48 @@ while True:
             # Sprawdzenie, czy kursor myszy znajduje się poza obszarem
             if event.type == pygame.MOUSEBUTTONDOWN:
                 # Sprawdzenie, czy kliknięto w obszarze przycisków
-                if button_rect.collidepoint(event.pos):
-                    print("Zatwierdź button clicked")
-                    confirm_number()
+                if confirm_button_rect.collidepoint(event.pos):
+                    input_text = text_input.get_text().strip()
+
+                    if input_text:
+                        user_value = int(input_text)
+                        print(f"Wprowadzony numer: {user_value}")
+                        confirm_number()
+                    else:
+                        message_label.set_text("Pole tekstowe jest puste. Wprowadź numer.")
+
                 elif clear_button_rect.collidepoint(event.pos):
                     screen_reset()
+
+            # Obsługa zdarzeń klawiatury dla pygame_gui
+            manager.process_events(event)
+
+        # Aktualizacja pygame_gui
+        manager.update(time_delta)
 
         # Rysowanie obszaru rysowania
         pygame.draw.rect(screen, (0, 255, 0), drawing_area_rect, 2)
 
         # Rysowanie przycisków
-        pygame.draw.rect(screen, (0, 128, 255), button_rect)
-        pygame.draw.rect(screen, (255, 0, 0), clear_button_rect)
-        font = pygame.font.Font(None, 36)
-        button_text = font.render("Zatwierdź", True, white)
-        clear_button_text = font.render("Wyczyść", True, white)
-        screen.blit(button_text, (
-            button_rect.centerx - button_text.get_width() // 2,
-            button_rect.centery - button_text.get_height() // 2
-        ))
-        screen.blit(clear_button_text, (
-            clear_button_rect.centerx - clear_button_text.get_width() // 2,
-            clear_button_rect.centery - clear_button_text.get_height() // 2
-        ))
+        #pygame.draw.rect(screen, (0, 128, 255), button_rect)
+        #pygame.draw.rect(screen, (255, 0, 0), clear_button_rect)
+        #font = pygame.font.Font(None, 36)
+        #button_text = font.render("Zatwierdź", True, white)
+        #clear_button_text = font.render("Wyczyść", True, white)
+        #screen.blit(button_text, (
+        #    button_rect.centerx - button_text.get_width() // 2,
+        #    button_rect.centery - button_text.get_height() // 2
+        #))
+        #screen.blit(clear_button_text, (
+        #    clear_button_rect.centerx - clear_button_text.get_width() // 2,
+        #    clear_button_rect.centery - clear_button_text.get_height() // 2
+        #))
+
+        # Rysowanie pola do wpisywania tekstu
+        manager.draw_ui(screen)
+
+        # Aktualizuj etykietę z komunikatem
+        manager.draw_ui(screen)
 
     # Update the display
     pygame.display.flip()
