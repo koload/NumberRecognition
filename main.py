@@ -1,14 +1,74 @@
 import pygame
 import sys
+import csv
 from pygame_gui import UIManager, elements
+import numpy as np
+
+# Wczytaj dane z pliku CSV
+with open('dates.csv', 'r') as file:
+    reader = csv.reader(file)
+    next(reader)  # Pomijamy pierwszy wiersz z legendą
+    data = list(reader)
 
 #Pamiętaj o:    pip install pygame_gui
+
+
+class NeuralNetwork:
+    def __init__(self, input_size, hidden_size, output_size):
+        # Inicjalizacja wag i obciążeń warstw ukrytej i wyjściowej
+        self.weights_input_hidden = np.random.rand(input_size, hidden_size)
+        self.weights_hidden_output = np.random.rand(hidden_size, output_size)
+        self.bias_hidden = np.zeros((1, hidden_size))
+        self.bias_output = np.zeros((1, output_size))
+
+    def sigmoid(self, x):
+        # Funkcja sigmoidalna do aktywacji neuronów
+        return 1 / (1 + np.exp(-x))
+
+    def sigmoid_derivative(self, x):
+        # Pochodna funkcji sigmoidalnej
+        return x * (1 - x)
+
+    def train(self, inputs, targets, epochs, learning_rate):
+        for epoch in range(epochs):
+            # Propagacja w przód
+            hidden_layer_input = np.dot(inputs, self.weights_input_hidden) + self.bias_hidden
+            hidden_layer_output = self.sigmoid(hidden_layer_input)
+
+            output_layer_input = np.dot(hidden_layer_output, self.weights_hidden_output) + self.bias_output
+            output_layer_output = self.sigmoid(output_layer_input)
+
+            # Obliczenie błędu
+            output_error = targets - output_layer_output
+
+            # Propagacja wsteczna
+            output_delta = output_error * self.sigmoid_derivative(output_layer_output)
+            hidden_error = output_delta.dot(self.weights_hidden_output.T)
+            hidden_delta = hidden_error * self.sigmoid_derivative(hidden_layer_output)
+
+            # Aktualizacja wag i obciążeń
+            self.weights_hidden_output += hidden_layer_output.T.dot(output_delta) * learning_rate
+            self.bias_output += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
+            self.weights_input_hidden += inputs.T.dot(hidden_delta) * learning_rate
+            self.bias_hidden += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
+
+    def predict(self, inputs):
+        # Przewidywanie na podstawie danych wejściowych
+        hidden_layer_input = np.dot(inputs, self.weights_input_hidden) + self.bias_hidden
+        hidden_layer_output = self.sigmoid(hidden_layer_input)
+
+        output_layer_input = np.dot(hidden_layer_output, self.weights_hidden_output) + self.bias_output
+        output_layer_output = self.sigmoid(output_layer_input)
+
+        return output_layer_output
+
 
 pygame.init()
 
 trial_number = 0
 user_value = None
 input_text = ""
+recognized_number = None
 
 # Colors
 black = (0, 0, 0)
@@ -42,19 +102,64 @@ clear_button = elements.UIButton(relative_rect=clear_button_rect, text='Wyczysc'
 message_label_rect = pygame.Rect((width - 350, height - 150), (400, 50))
 message_label = elements.UILabel(relative_rect=message_label_rect, text='', manager=manager)
 
-
 # Drawing variables
 drawing = False
 last_pos = None
-
-# Button variables
-#button_rect = pygame.Rect(50, height - 70, 100, 50)
-#clear_button_rect = pygame.Rect(width - 150, height - 70, 100, 50)
 
 # Drawing area rectangle
 drawing_area_rect = pygame.Rect(0, 0, width, height - 200)
 
 
+
+# Konwertuj dane na numpy array
+data_array = np.array(data, dtype=int)
+
+# Pierwsza kolumna zawiera numer próby, druga kolumna zawiera wartość docelową
+targets = data_array[:, 1]
+
+# Pozostałe kolumny zawierają informacje o pikselach, użyj ich jako dane treningowe
+inputs = data_array[:, 2:]
+
+# Normalizuj dane wejściowe (opcjonalne)
+inputs = inputs / 255.0
+
+# Wymiary danych treningowych
+num_samples = inputs.shape
+
+# Przygotuj dane docelowe jako macierz o wymiarach (num_samples, 10)
+target_matrix = np.zeros((len(data), 10))
+
+# Ustal etykiety dla danych
+#targets = [sample[0] for sample in data]
+
+# Oznacz odpowiadające próbki w macierzy docelowej
+target_matrix[np.arange(len(data)), targets] = 1
+#try:
+#    target_matrix[np.arange(len(data)), list(map(int, targets))] = 1
+#except Exception as e:
+#    print("Error:", e)
+#    print("Length of data:", len(data))
+#    print("Length of targets:", len(targets))
+#    print("Targets (before conversion to int):", targets)
+#    print("Targets (after conversion to int):", list(map(int, targets)))
+
+
+
+# Teraz możesz użyć inputs i target_matrix jako dane do trenowania sieci neuronowej
+
+
+# Utwórz instancję sieci neuronowej
+input_size = 64  # Liczba pikseli
+hidden_size = 32  # Liczba neuronów w warstwie ukrytej
+output_size = 10  # Liczba możliwych cyfr od 0 do 9
+learning_rate = 0.01
+epochs = 10000
+
+# Utwórz instancję sieci neuronowej
+neural_network = NeuralNetwork(input_size, hidden_size, output_size)
+
+# Trenuj sieć neuronową
+neural_network.train(inputs, target_matrix, epochs, learning_rate)
 
 
 #Funkcja przetwarzająca współrzędne myszy.
@@ -67,19 +172,12 @@ def screen_reset():
     pygame.display.flip()
     """Dodac zerowanie matrycy"""
 
-#Funkcja wyświetlająca komunikat na dole ekranu.
-def display_message(message):
-    message_font = pygame.font.Font(None, 36)
-    message_text = message_font.render(message, True, white)
-    screen.blit(message_text, (width // 2 - message_text.get_width() // 2, height - 40))
-    pygame.display.flip()
-
 #Funkcja obliczająca informacje o siatce na podstawie parametrów.
 def calculate_grid_data(left_top, side_length, rows, cols):
     cell_width = side_length / cols
     cell_height = side_length / rows
 
-    print(f"Calculated cell_width: {cell_width}, cell_height: {cell_height}")
+    #print(f"Calculated cell_width: {cell_width}, cell_height: {cell_height}")
 
     grid_info = {
         'cell_width': cell_width,
@@ -95,7 +193,7 @@ def calculate_grid_data(left_top, side_length, rows, cols):
             right = left + cell_width
             bottom = top + cell_height
 
-            print(f"Generating points for cell ({i}, {j}): ({left}, {top}) - ({right}, {bottom})")
+            #print(f"Generating points for cell ({i}, {j}): ({left}, {top}) - ({right}, {bottom})")
             row_points.append(((left, top), (right, bottom)))
 
         grid_info['grid_points'].append(row_points)
@@ -106,7 +204,7 @@ def calculate_grid_data(left_top, side_length, rows, cols):
 def generate_grid_points(inner_screen, grid_info, color):
     for row in grid_info['grid_points']:
         for points in row:
-            print(f"Drawing rectangle: {points}")
+            #print(f"Drawing rectangle: {points}")
             pygame.draw.rect(inner_screen, color, points, 1)
 
     pygame.display.flip()
@@ -115,8 +213,9 @@ def generate_grid_points(inner_screen, grid_info, color):
 
 #Funkcja kolorowania wewnętrznych kwadratów (rysująca wewnętrzną siatkę i kolorująca pola z białymi punktami.)
 def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_points):
-    cell_width = side_length // cols
-    cell_height = side_length // rows
+    #Dodanie +1 żeby ograniczyć przycinanie wyników
+    cell_width = (side_length // cols) + 1
+    cell_height = (side_length // rows) + 1
 
     # Lista do przechowywania informacji o każdym kwadracie
     grid_data = []
@@ -130,10 +229,10 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
 
     for row in range(rows):
         for col in range(cols):
-            print(f"Checking cell {row}, {col}")
+            #print(f"Checking cell {row}, {col}")
             cell_rect = pygame.Rect(left_top[0] + col * cell_width, left_top[1] + row * cell_height,
                                     cell_width, cell_height)
-            print(f"Cell rect: {cell_rect}")
+            #print(f"Cell rect: {cell_rect}")
 
             # Sprawdzenie, czy w komórce znajdują się białe piksele
             is_white = is_white_in_cell(surface, cell_rect)
@@ -150,6 +249,8 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
 
     # Aktualizacja ekranu
     pygame.display.flip()
+
+    return grid_data  # Dodaj tę linię, aby funkcja zwracała informacje o zapełnieniu pikseli
 
 #Funkcja sprawdzająca, czy w komórce znajduje się biały punkt.
 def is_white_in_cell(surface, cell_rect):
@@ -169,45 +270,78 @@ def save_grid_data(output_file, grid_data):
         line = ','.join(map(str, grid_data)) + '\n'
         file.write(line)
 
+def recognize_number(grid_data):
+    # Przygotuj dane do przetworzenia przez model
+    #input_data = grid_data[2:]  # Pomiń numer próby i wartość użytkownika
+
+    trial_number, user_value, *pixel_data = grid_data
+    input_data = pixel_data
+
+    # Przekształć dane na wejście modelu
+    input_data = np.array(input_data)
+
+    # Przewiń modele w przód
+    prediction = neural_network.predict(input_data)
+
+    # Wyświetl wynik w formie uporządkowanej
+    sorted_digits = np.argsort(prediction[0])[::-1]
+
+    print("Przewidywany numer:")
+    for i, digit in enumerate(sorted_digits):
+        probability = prediction[0][digit]
+        print(f"{i + 1}. Cyfra {digit}: {probability}")
+
+    return prediction
+
 #Funkcja potwierdzająca liczbę na podstawie białych punktów.
 def confirm_number():
     white_points = []
+    grid_data = []
+
     for y in range(drawing_area_rect.top, drawing_area_rect.bottom):
         for x in range(drawing_area_rect.left, drawing_area_rect.right):
             pixel_color = screen.get_at((x, y))
             if pixel_color == (255, 255, 255):
                 white_points.append((x, y))
 
-    if white_points:
-        min_x = min(white_points, key=lambda point: point[0])[0]
-        max_x = max(white_points, key=lambda point: point[0])[0]
-        min_y = min(white_points, key=lambda point: point[1])[1]
-        max_y = max(white_points, key=lambda point: point[1])[1]
+    if not white_points:
+        message_label.set_text("Brak punktów do zatwierdzenia")
+        return None
 
-        center_x = (min_x + max_x) // 2
-        center_y = (min_y + max_y) // 2
 
-        side_length = max(max_x - min_x, max_y - min_y)
+    min_x = min(white_points, key=lambda point: point[0])[0]
+    max_x = max(white_points, key=lambda point: point[0])[0]
+    min_y = min(white_points, key=lambda point: point[1])[1]
+    max_y = max(white_points, key=lambda point: point[1])[1]
 
-        pygame.draw.rect(screen, (0, 0, 255), (min_x, min_y, max_x - min_x, max_y - min_y), 2)
-        pygame.draw.circle(screen, (255, 0, 0), (center_x, center_y), 5)
-        pygame.draw.rect(screen, (255, 0, 0),
+    center_x = (min_x + max_x) // 2
+    center_y = (min_y + max_y) // 2
+
+    side_length = max(max_x - min_x, max_y - min_y)
+
+    pygame.draw.rect(screen, (0, 0, 255), (min_x, min_y, max_x - min_x, max_y - min_y), 2)
+    pygame.draw.circle(screen, (255, 0, 0), (center_x, center_y), 5)
+    pygame.draw.rect(screen, (255, 0, 0),
                          (center_x - side_length // 2, center_y - side_length // 2, side_length, side_length), 2)
 
-        grid_rows = 8
-        grid_cols = 8
-        grid_info = calculate_grid_data((center_x - (side_length / 2), center_y - (side_length / 2)), side_length,
+    grid_rows = 8
+    grid_cols = 8
+    grid_info = calculate_grid_data((center_x - (side_length / 2), center_y - (side_length / 2)), side_length,
                                         grid_rows, grid_cols)
-        #generate_grid_points(screen, grid_info, (169, 169, 169))
-        draw_internal_grid(screen, (center_x - (side_length / 2), center_y - (side_length / 2)), side_length, grid_rows,
+    #generate_grid_points(screen, grid_info, (169, 169, 169))
+
+    #Żeby nie zapomnieć, dodałem +-8 do skrajnych rogów żeby zminimalizować cięcia
+    grid_data = draw_internal_grid(screen, ((center_x - (side_length / 2) ), (center_y - (side_length / 2))), side_length, grid_rows,
                            grid_cols, (169, 169, 169), white_points)
 
-        #display_message(f"Twoja liczba została zatwierdzona")
-        message_label.set_text("Twoja liczba została zatwierdzona")
+    message_label.set_text("Twoja liczba została zatwierdzona")
 
-    else:
-        #display_message("Brak punktów do zatwierdzenia")
-        message_label.set_text("Brak punktów do zatwierdzenia")
+    try:
+        prediction = recognize_number(grid_data)
+        #return prediction
+    except Exception as e:
+        print("Error during prediction:", e)
+        #return None
 
 
 # Main loop
@@ -255,7 +389,8 @@ while True:
                     if input_text:
                         user_value = int(input_text)
                         print(f"Wprowadzony numer: {user_value}")
-                        confirm_number()
+                        prediction = confirm_number()
+
                     else:
                         message_label.set_text("Pole tekstowe jest puste. Wprowadź numer.")
 
@@ -270,21 +405,6 @@ while True:
 
         # Rysowanie obszaru rysowania
         pygame.draw.rect(screen, (0, 255, 0), drawing_area_rect, 2)
-
-        # Rysowanie przycisków
-        #pygame.draw.rect(screen, (0, 128, 255), button_rect)
-        #pygame.draw.rect(screen, (255, 0, 0), clear_button_rect)
-        #font = pygame.font.Font(None, 36)
-        #button_text = font.render("Zatwierdź", True, white)
-        #clear_button_text = font.render("Wyczyść", True, white)
-        #screen.blit(button_text, (
-        #    button_rect.centerx - button_text.get_width() // 2,
-        #    button_rect.centery - button_text.get_height() // 2
-        #))
-        #screen.blit(clear_button_text, (
-        #    clear_button_rect.centerx - clear_button_text.get_width() // 2,
-        #    clear_button_rect.centery - clear_button_text.get_height() // 2
-        #))
 
         # Rysowanie pola do wpisywania tekstu
         manager.draw_ui(screen)
