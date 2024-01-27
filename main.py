@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Wczytaj dane z pliku CSV
-with open('dates.csv', 'r') as file:
+with open('data.csv', 'r') as file:
     reader = csv.reader(file)
     next(reader)  # Pomijamy pierwszy wiersz z legendą
     data = list(reader)
@@ -238,7 +238,7 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
                 pygame.draw.rect(surface, (169, 169, 169), cell_rect)
 
     # Zapisanie informacji o białych pikselach do pliku
-    save_grid_data('dates.csv', grid_data)
+    save_grid_data('data.csv', grid_data)
 
     # Aktualizacja ekranu
     pygame.display.flip()
