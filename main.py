@@ -10,7 +10,6 @@ with open('data.csv', 'r') as file:
     next(reader)  # Pomijamy pierwszy wiersz z legendą
     data = list(reader)
 
-
 class NeuralNetwork:
     # input_size: warstwa 1, hidden_size: warstwa środkowa, out_size: warstwa wyjściowa
     def __init__(self, input_size, hidden_size, output_size):
@@ -56,9 +55,9 @@ class NeuralNetwork:
             self.weights_input_hidden += inputs.T.dot(hidden_delta) * learning_rate
             self.bias_hidden += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
 
-    def predict(self, inputs):
+    def predict(self, input):
         # Przewidywanie na podstawie danych wejściowych
-        hidden_layer_input = np.dot(inputs, self.weights_input_hidden) + self.bias_hidden
+        hidden_layer_input = np.dot(input, self.weights_input_hidden) + self.bias_hidden
         hidden_layer_output = self.sigmoid(hidden_layer_input)
 
         output_layer_input = np.dot(hidden_layer_output, self.weights_hidden_output) + self.bias_output
@@ -244,7 +243,7 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
 
 # Funkcja sprawdzająca, czy w komórce znajduje się biały punkt.
 def is_white_in_cell(surface, cell_rect):
-    # Iteracja po wszystkich pikselach wewnątrz#Funkcja sprawdzająca, czy w komórce znajduje się biały punkt. komórki
+    # Iteracja po wszystkich pikselach wewnątrz komórki
     for y in range(cell_rect.top, cell_rect.bottom):
         for x in range(cell_rect.left, cell_rect.right):
             pixel_color = surface.get_at((x, y))
