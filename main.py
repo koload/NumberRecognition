@@ -4,7 +4,6 @@ import csv
 from pygame_gui import UIManager, elements
 import numpy as np
 
-#Pamiętaj o:    pip install pygame_gui
 
 # Wczytaj dane z pliku CSV
 with open('dates.csv', 'r') as file:
@@ -12,11 +11,15 @@ with open('dates.csv', 'r') as file:
     next(reader)  # Pomijamy pierwszy wiersz z legendą
     data = list(reader)
 
+
 class NeuralNetwork:
+    # input_size: warstwa 1, hidden_size: warstwa środkowa, out_size: warstwa wyjściowa
     def __init__(self, input_size, hidden_size, output_size):
         # Inicjalizacja wag i obciążeń warstw ukrytej i wyjściowej
         self.weights_input_hidden = np.random.rand(input_size, hidden_size)
         self.weights_hidden_output = np.random.rand(hidden_size, output_size)
+
+        # wektor obciążenia
         self.bias_hidden = np.zeros((1, hidden_size))
         self.bias_output = np.zeros((1, output_size))
 
@@ -31,7 +34,10 @@ class NeuralNetwork:
     def train(self, inputs, targets, epochs, learning_rate):
         for epoch in range(epochs):
             # Propagacja w przód
+            # hidden_layer_input: wartość którą neuron w warstwie środkowej przymuje na wejściu
             hidden_layer_input = np.dot(inputs, self.weights_input_hidden) + self.bias_hidden
+
+            # hidden_layer_output: wartość która neuron w warstwie środkowej przekazuje dalej
             hidden_layer_output = self.sigmoid(hidden_layer_input)
 
             output_layer_input = np.dot(hidden_layer_output, self.weights_hidden_output) + self.bias_output
@@ -51,9 +57,9 @@ class NeuralNetwork:
             self.weights_input_hidden += inputs.T.dot(hidden_delta) * learning_rate
             self.bias_hidden += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
 
-    def predict(self, inputs):
+    def predict(self, input):
         # Przewidywanie na podstawie danych wejściowych
-        hidden_layer_input = np.dot(inputs, self.weights_input_hidden) + self.bias_hidden
+        hidden_layer_input = np.dot(input, self.weights_input_hidden) + self.bias_hidden
         hidden_layer_output = self.sigmoid(hidden_layer_input)
 
         output_layer_input = np.dot(hidden_layer_output, self.weights_hidden_output) + self.bias_output
@@ -125,14 +131,20 @@ inputs = inputs / 255.0
 # Wymiary danych treningowych
 num_samples = inputs.shape
 
-# Przygotuj dane docelowe jako macierz o wymiarach (num_samples, 10)
+# Przygotuj dane docelowe jako macierz o wymiarach (ilość_wierszy_data(num_samples), 10)
 target_matrix = np.zeros((len(data), 10))
 
 # Ustal etykiety dla danych
-#targets = [sample[0] for sample in data]
+# targets = [sample[0] for sample in data]
 
 # Oznacz odpowiadające próbki w macierzy docelowej
 target_matrix[np.arange(len(data)), targets] = 1
+
+
+# print("\targets", targets)
+# print("\nn arrange", np.arange(len(data)))
+# print("\ntager_matrix", target_matrix)
+
 
 # Utwórz instancję sieci neuronowej
 input_size = 64  # Liczba pikseli
@@ -149,17 +161,17 @@ neural_network = NeuralNetwork(input_size, hidden_size, output_size)
 neural_network.train(inputs, target_matrix, epochs, learning_rate)
 
 
-#Funkcja przetwarzająca współrzędne myszy.
+# Funkcja przetwarzająca współrzędne myszy.
 def process_coordinates(x, y):
     print(x, y)
 
-#Funkcja resetująca ekran, czyści ekran i odświeża.
+# Funkcja resetująca ekran, czyści ekran i odświeża.
 def screen_reset():
     screen.fill(black)
     pygame.display.flip()
     """Dodac zerowanie matrycy"""
 
-#Funkcja obliczająca informacje o siatce na podstawie parametrów.
+# Funkcja obliczająca informacje o siatce na podstawie parametrów.
 def calculate_grid_data(left_top, side_length, rows, cols):
     cell_width = side_length / cols
     cell_height = side_length / rows
@@ -184,7 +196,7 @@ def calculate_grid_data(left_top, side_length, rows, cols):
 
     return grid_info
 
-#Funkcja rysująca siatkę punktów na ekranie.
+# Funkcja rysująca siatkę punktów na ekranie.
 def generate_grid_points(inner_screen, grid_info, color):
     for row in grid_info['grid_points']:
         for points in row:
@@ -194,9 +206,9 @@ def generate_grid_points(inner_screen, grid_info, color):
 
     return grid_info
 
-#Funkcja kolorowania wewnętrznych kwadratów (rysująca wewnętrzną siatkę i kolorująca pola z białymi punktami.)
+# Funkcja kolorowania wewnętrznych kwadratów (rysująca wewnętrzną siatkę i kolorująca pola z białymi punktami.)
 def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_points):
-    #Dodanie +1 żeby ograniczyć przycinanie wyników
+    # Dodanie +1 żeby ograniczyć przycinanie wyników
     cell_width = (side_length // cols) + 1
     cell_height = (side_length // rows) + 1
 
@@ -233,7 +245,7 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
 
     return grid_data  # Dodaj tę linię, aby funkcja zwracała informacje o zapełnieniu pikseli
 
-#Funkcja sprawdzająca, czy w komórce znajduje się biały punkt.
+# Funkcja sprawdzająca, czy w komórce znajduje się biały punkt.
 def is_white_in_cell(surface, cell_rect):
     # Iteracja po wszystkich pikselach wewnątrz komórki
     for y in range(cell_rect.top, cell_rect.bottom):
@@ -244,7 +256,7 @@ def is_white_in_cell(surface, cell_rect):
                 return True  # Znaleziono biały piksel w komórce
     return False  # Brak białego piksela w komórce
 
-#Funkcja zapisująca informacje o białych pikselach do pliku CSV.
+# Funkcja zapisująca informacje o białych pikselach do pliku CSV.
 def save_grid_data(output_file, grid_data):
     with open(output_file, 'a') as file:
         # Konwersja danych do postaci string i zapisanie do pliku
@@ -253,7 +265,7 @@ def save_grid_data(output_file, grid_data):
 
 def recognize_number(grid_data):
     # Przygotuj dane do przetworzenia przez model
-    #input_data = grid_data[2:]  # Pomiń numer próby i wartość użytkownika
+    # input_data = grid_data[2:]  # Pomiń numer próby i wartość użytkownika
 
     trial_number, user_value, *pixel_data = grid_data
     input_data = pixel_data
@@ -278,7 +290,7 @@ def recognize_number(grid_data):
 
     return prediction
 
-#Funkcja potwierdzająca liczbę na podstawie białych punktów.
+# Funkcja potwierdzająca liczbę na podstawie białych punktów.
 def confirm_number():
     white_points = []
     grid_data = []
@@ -313,7 +325,7 @@ def confirm_number():
     grid_cols = 8
     grid_info = calculate_grid_data((center_x - (side_length / 2), center_y - (side_length / 2)), side_length,
                                         grid_rows, grid_cols)
-    #generate_grid_points(screen, grid_info, (169, 169, 169))
+    # Generate_grid_points(screen, grid_info, (169, 169, 169))
 
     grid_data = draw_internal_grid(screen, ((center_x - (side_length / 2)), (center_y - (side_length / 2))), side_length, grid_rows,
                            grid_cols, (169, 169, 169), white_points)
@@ -322,10 +334,10 @@ def confirm_number():
 
     try:
         prediction = recognize_number(grid_data)
-        #return prediction
+        # return prediction
     except Exception as e:
         print("Error during prediction:", e)
-        #return None
+        # return None
 
 
 # Main loop
@@ -353,7 +365,7 @@ while True:
 
             if event.type == pygame.MOUSEMOTION and drawing:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                #process_coordinates(mouse_x, mouse_y)
+                # Process_coordinates(mouse_x, mouse_y)
 
                 current_pos = pygame.mouse.get_pos()
                 pygame.draw.line(screen, white, last_pos, current_pos, 2)
