@@ -64,6 +64,7 @@ class NeuralNetwork:
 pygame.init()
 
 trial_number = 0
+trial_number_to_tests = 0
 user_value = None
 input_text = ""
 recognized_number = None
@@ -270,6 +271,10 @@ def recognize_number(grid_data):
     for i, digit in enumerate(sorted_digits):
         probability = prediction[0][digit]
         print(f"{i + 1}. Cyfra {digit}: {probability}")
+
+    global trial_number_to_tests
+    trial_number_to_tests +=1
+    print(f"\n\nNumer testu: {trial_number_to_tests} \n\n")
 
     return prediction
 
