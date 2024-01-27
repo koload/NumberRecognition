@@ -4,14 +4,13 @@ import csv
 from pygame_gui import UIManager, elements
 import numpy as np
 
+#Pamiętaj o:    pip install pygame_gui
+
 # Wczytaj dane z pliku CSV
 with open('dates.csv', 'r') as file:
     reader = csv.reader(file)
     next(reader)  # Pomijamy pierwszy wiersz z legendą
     data = list(reader)
-
-#Pamiętaj o:    pip install pygame_gui
-
 
 class NeuralNetwork:
     def __init__(self, input_size, hidden_size, output_size):
@@ -62,7 +61,6 @@ class NeuralNetwork:
 
         return output_layer_output
 
-
 pygame.init()
 
 trial_number = 0
@@ -86,7 +84,7 @@ pygame.display.set_icon(icon)
 # Inicjalizacja pygame_gui
 manager = UIManager((width, height))
 
-# Przykładowy element wprowadzania tekstu
+# Element wprowadzania tekstu
 text_input_rect = pygame.Rect((75, height - 150), (200, 35))
 text_input = elements.UITextEntryLine(relative_rect=text_input_rect, manager=manager)
 
@@ -134,19 +132,6 @@ target_matrix = np.zeros((len(data), 10))
 
 # Oznacz odpowiadające próbki w macierzy docelowej
 target_matrix[np.arange(len(data)), targets] = 1
-#try:
-#    target_matrix[np.arange(len(data)), list(map(int, targets))] = 1
-#except Exception as e:
-#    print("Error:", e)
-#    print("Length of data:", len(data))
-#    print("Length of targets:", len(targets))
-#    print("Targets (before conversion to int):", targets)
-#    print("Targets (after conversion to int):", list(map(int, targets)))
-
-
-
-# Teraz możesz użyć inputs i target_matrix jako dane do trenowania sieci neuronowej
-
 
 # Utwórz instancję sieci neuronowej
 input_size = 64  # Liczba pikseli
@@ -155,6 +140,7 @@ output_size = 10  # Liczba możliwych cyfr od 0 do 9
 learning_rate = 0.01
 epochs = 10000
 
+# Teraz możesz użyć inputs i target_matrix jako dane do trenowania sieci neuronowej
 # Utwórz instancję sieci neuronowej
 neural_network = NeuralNetwork(input_size, hidden_size, output_size)
 
@@ -177,8 +163,6 @@ def calculate_grid_data(left_top, side_length, rows, cols):
     cell_width = side_length / cols
     cell_height = side_length / rows
 
-    #print(f"Calculated cell_width: {cell_width}, cell_height: {cell_height}")
-
     grid_info = {
         'cell_width': cell_width,
         'cell_height': cell_height,
@@ -193,7 +177,6 @@ def calculate_grid_data(left_top, side_length, rows, cols):
             right = left + cell_width
             bottom = top + cell_height
 
-            #print(f"Generating points for cell ({i}, {j}): ({left}, {top}) - ({right}, {bottom})")
             row_points.append(((left, top), (right, bottom)))
 
         grid_info['grid_points'].append(row_points)
@@ -204,7 +187,6 @@ def calculate_grid_data(left_top, side_length, rows, cols):
 def generate_grid_points(inner_screen, grid_info, color):
     for row in grid_info['grid_points']:
         for points in row:
-            #print(f"Drawing rectangle: {points}")
             pygame.draw.rect(inner_screen, color, points, 1)
 
     pygame.display.flip()
@@ -229,10 +211,8 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
 
     for row in range(rows):
         for col in range(cols):
-            #print(f"Checking cell {row}, {col}")
             cell_rect = pygame.Rect(left_top[0] + col * cell_width, left_top[1] + row * cell_height,
                                     cell_width, cell_height)
-            #print(f"Cell rect: {cell_rect}")
 
             # Sprawdzenie, czy w komórce znajdują się białe piksele
             is_white = is_white_in_cell(surface, cell_rect)
@@ -330,8 +310,7 @@ def confirm_number():
                                         grid_rows, grid_cols)
     #generate_grid_points(screen, grid_info, (169, 169, 169))
 
-    #Żeby nie zapomnieć, dodałem +-8 do skrajnych rogów żeby zminimalizować cięcia
-    grid_data = draw_internal_grid(screen, ((center_x - (side_length / 2) ), (center_y - (side_length / 2))), side_length, grid_rows,
+    grid_data = draw_internal_grid(screen, ((center_x - (side_length / 2)), (center_y - (side_length / 2))), side_length, grid_rows,
                            grid_cols, (169, 169, 169), white_points)
 
     message_label.set_text("Twoja liczba została zatwierdzona")
@@ -369,7 +348,7 @@ while True:
 
             if event.type == pygame.MOUSEMOTION and drawing:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                process_coordinates(mouse_x, mouse_y)
+                #process_coordinates(mouse_x, mouse_y)
 
                 current_pos = pygame.mouse.get_pos()
                 pygame.draw.line(screen, white, last_pos, current_pos, 2)
