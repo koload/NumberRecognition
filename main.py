@@ -4,14 +4,10 @@ import csv
 from pygame_gui import UIManager, elements
 import numpy as np
 
+
 # Ustawienie ziarna dla generatora liczb losowych
 np.random.seed(42)  # Możesz wybrać dowolną liczbę jako ziarno, 42 to tylko przykład
 
-# Wczytaj dane z pliku CSV
-with open('data.csv', 'r') as file:
-    reader = csv.reader(file)
-    next(reader)  # Pomijamy pierwszy wiersz z legendą
-    data = list(reader)
 
 class NeuralNetwork:
     # input_size: warstwa 1, hidden_size: warstwa środkowa, out_size: warstwa wyjściowa
@@ -71,7 +67,6 @@ class NeuralNetwork:
             self.weights_hidden_output -= self.lambda_reg * self.weights_hidden_output
             self.weights_input_hidden -= self.lambda_reg * self.weights_input_hidden
 
-
     def predict(self, input):
         # Przewidywanie na podstawie danych wejściowych
         hidden_layer_input = np.dot(input, self.weights_input_hidden) + self.bias_hidden
@@ -82,53 +77,12 @@ class NeuralNetwork:
 
         return output_layer_output
 
-pygame.init()
 
-trial_number = 0
-trial_number_to_tests = 0
-user_value = None
-input_text = ""
-recognized_number = None
-
-# Colors
-black = (0, 0, 0)
-white = (255, 255, 255)
-
-# Display
-width, height = 800, 800
-icon = pygame.image.load('Number_sign.png')
-
-screen = pygame.display.set_mode((width, height))
-screen.fill(black)
-pygame.display.set_caption("Number Recognition")
-pygame.display.set_icon(icon)
-
-# Inicjalizacja pygame_gui
-manager = UIManager((width, height))
-
-# Element wprowadzania tekstu
-text_input_rect = pygame.Rect((75, height - 150), (200, 35))
-text_input = elements.UITextEntryLine(relative_rect=text_input_rect, manager=manager)
-
-# Przycisk "Zatwierdź"
-confirm_button_rect = pygame.Rect((75, height - 100), (100, 50))
-confirm_button = elements.UIButton(relative_rect=confirm_button_rect, text='Zatwierdź', manager=manager)
-
-# Przycisk "Wyczyść"
-clear_button_rect = pygame.Rect((width - 175, height - 100), (100, 50))
-clear_button = elements.UIButton(relative_rect=clear_button_rect, text='Wyczysc', manager=manager)
-
-# Label do wyświetlania komunikatów
-message_label_rect = pygame.Rect((width - 350, height - 150), (400, 50))
-message_label = elements.UILabel(relative_rect=message_label_rect, text='', manager=manager)
-
-# Drawing variables
-drawing = False
-last_pos = None
-
-# Drawing area rectangle
-drawing_area_rect = pygame.Rect(0, 0, width, height - 200)
-
+# Wczytaj dane z pliku CSV
+with open('data.csv', 'r') as file:
+    reader = csv.reader(file)
+    next(reader)  # Pomijamy pierwszy wiersz z legendą
+    data = list(reader)
 
 
 # Konwertuj dane na numpy array
@@ -143,7 +97,6 @@ shuffled_data_array = data_array[shuffled_indices]
 
 # Ustawienie wartości data_array na nową z losową kolejnością wierszy
 data_array = shuffled_data_array
-
 
 # Pierwsza kolumna zawiera numer próby, druga kolumna zawiera wartość docelową
 targets = data_array[:, 1]
@@ -183,6 +136,53 @@ neural_network = NeuralNetwork(input_size, hidden_size, output_size)
 
 # Trenuj sieć neuronową
 neural_network.train(inputs, target_matrix, epochs, learning_rate)
+
+# Część Front-end
+pygame.init()
+
+trial_number = 0
+trial_number_to_tests = 0
+user_value = None
+input_text = ""
+
+# Colors
+black = (0, 0, 0)
+white = (255, 255, 255)
+
+# Display
+width, height = 800, 800
+icon = pygame.image.load('Number_sign.png')
+
+screen = pygame.display.set_mode((width, height))
+screen.fill(black)
+pygame.display.set_caption("Number Recognition")
+pygame.display.set_icon(icon)
+
+# Inicjalizacja pygame_gui
+manager = UIManager((width, height))
+
+# Element wprowadzania tekstu
+text_input_rect = pygame.Rect((75, height - 150), (200, 35))
+text_input = elements.UITextEntryLine(relative_rect=text_input_rect, manager=manager)
+
+# Przycisk "Zatwierdź"
+confirm_button_rect = pygame.Rect((75, height - 100), (100, 50))
+confirm_button = elements.UIButton(relative_rect=confirm_button_rect, text='Zatwierdź', manager=manager)
+
+# Przycisk "Wyczyść"
+clear_button_rect = pygame.Rect((width - 175, height - 100), (100, 50))
+clear_button = elements.UIButton(relative_rect=clear_button_rect, text='Wyczysc', manager=manager)
+
+# Label do wyświetlania komunikatów
+message_label_rect = pygame.Rect((width - 350, height - 150), (400, 50))
+message_label = elements.UILabel(relative_rect=message_label_rect, text='', manager=manager)
+
+# Drawing variables
+drawing = False
+last_pos = None
+
+# Drawing area rectangle
+drawing_area_rect = pygame.Rect(0, 0, width, height - 200)
 
 
 # Funkcja przetwarzająca współrzędne myszy.
@@ -262,7 +262,7 @@ def draw_internal_grid(surface, left_top, side_length, rows, cols, color, white_
                 pygame.draw.rect(surface, (169, 169, 169), cell_rect)
 
     # Zapisanie informacji o białych pikselach do pliku
-    save_grid_data('data.csv', grid_data)
+    # save_grid_data('data.csv', grid_data)
 
     # Aktualizacja ekranu
     pygame.display.flip()
@@ -289,8 +289,6 @@ def save_grid_data(output_file, grid_data):
 
 def recognize_number(grid_data):
     # Przygotuj dane do przetworzenia przez model
-    # input_data = grid_data[2:]  # Pomiń numer próby i wartość użytkownika
-
     trial_number, user_value, *pixel_data = grid_data
     input_data = pixel_data
 
@@ -303,16 +301,19 @@ def recognize_number(grid_data):
     # Wyświetl wynik w formie uporządkowanej
     sorted_digits = np.argsort(prediction[0])[::-1]
 
+    global trial_number_to_tests
+    trial_number_to_tests += 1
+    print(f"\nNumer testu: {trial_number_to_tests}")
+
     print("Przewidywany numer:")
     for i, digit in enumerate(sorted_digits):
         probability = prediction[0][digit]
         print(f"{i + 1}. Cyfra {digit}: {probability}")
 
-    global trial_number_to_tests
-    trial_number_to_tests +=1
-    print(f"\n\nNumer testu: {trial_number_to_tests} \n\n")
+        # if i == 0:
+        #     most_likely_number = digit
 
-    return prediction
+    # return most_likely_number
 
 # Funkcja potwierdzająca liczbę na podstawie białych punktów.
 def confirm_number():
@@ -328,7 +329,6 @@ def confirm_number():
     if not white_points:
         message_label.set_text("Brak punktów do zatwierdzenia")
         return None
-
 
     min_x = min(white_points, key=lambda point: point[0])[0]
     max_x = max(white_points, key=lambda point: point[0])[0]
@@ -347,8 +347,7 @@ def confirm_number():
 
     grid_rows = 8
     grid_cols = 8
-    grid_info = calculate_grid_data((center_x - (side_length / 2), center_y - (side_length / 2)), side_length,
-                                        grid_rows, grid_cols)
+    # grid_info = calculate_grid_data((center_x - (side_length / 2), center_y - (side_length / 2)), side_length, grid_rows, grid_cols)
     # Generate_grid_points(screen, grid_info, (169, 169, 169))
 
     grid_data = draw_internal_grid(screen, ((center_x - (side_length / 2)), (center_y - (side_length / 2))), side_length, grid_rows,
@@ -357,7 +356,8 @@ def confirm_number():
     message_label.set_text("Twoja liczba została zatwierdzona")
 
     try:
-        prediction = recognize_number(grid_data)
+        # prediction = recognize_number(grid_data)
+        recognize_number(grid_data)
         # return prediction
     except Exception as e:
         print("Error during prediction:", e)
@@ -404,15 +404,17 @@ while True:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 # Sprawdzenie, czy kliknięto w obszarze przycisków
                 if confirm_button_rect.collidepoint(event.pos):
-                    input_text = text_input.get_text().strip()
+                    #input_text = text_input.get_text().strip()
 
-                    if input_text:
-                        user_value = int(input_text)
-                        print(f"Wprowadzony numer: {user_value}")
-                        prediction = confirm_number()
+                    #if input_text:
+                    #    user_value = int(input_text)
+                    #    print(f"Wprowadzony numer: {user_value}")
+                    #    prediction = confirm_number()
 
-                    else:
-                        message_label.set_text("Pole tekstowe jest puste. Wprowadź numer.")
+                    #else:
+                    #    message_label.set_text("Pole tekstowe jest puste. Wprowadź numer.")
+
+                    confirm_number()
 
                 elif clear_button_rect.collidepoint(event.pos):
                     screen_reset()
