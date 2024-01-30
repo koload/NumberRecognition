@@ -4,6 +4,9 @@ import csv
 from pygame_gui import UIManager, elements
 import numpy as np
 
+# Ustawienie ziarna dla generatora liczb losowych
+np.random.seed(42)  # Możesz wybrać dowolną liczbę jako ziarno, 42 to tylko przykład
+
 # Wczytaj dane z pliku CSV
 with open('data.csv', 'r') as file:
     reader = csv.reader(file)
@@ -12,7 +15,7 @@ with open('data.csv', 'r') as file:
 
 class NeuralNetwork:
     # input_size: warstwa 1, hidden_size: warstwa środkowa, out_size: warstwa wyjściowa
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, lambda_reg=0.01):
         # Inicjalizacja wag i obciążeń warstw ukrytej i wyjściowej
         self.weights_input_hidden = np.random.rand(input_size, hidden_size)
         self.weights_hidden_output = np.random.rand(hidden_size, output_size)
@@ -20,6 +23,9 @@ class NeuralNetwork:
         # wektor obciążenia
         self.bias_hidden = np.zeros((1, hidden_size))
         self.bias_output = np.zeros((1, output_size))
+
+        # Parametr lambda_reg to współczynnik regularyzacji L2
+        self.lambda_reg = lambda_reg
 
     def sigmoid(self, x):
         # Funkcja sigmoidalna do aktywacji neuronów
@@ -49,11 +55,22 @@ class NeuralNetwork:
             hidden_error = output_delta.dot(self.weights_hidden_output.T)
             hidden_delta = hidden_error * self.sigmoid_derivative(hidden_layer_output)
 
-            # Aktualizacja wag i obciążeń
+            ## Aktualizacja wag i obciążeń
+            #self.weights_hidden_output += hidden_layer_output.T.dot(output_delta) * learning_rate
+            #self.bias_output += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
+            #self.weights_input_hidden += inputs.T.dot(hidden_delta) * learning_rate
+            #self.bias_hidden += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
+
+            # Aktualizacja wag z uwzględnieniem regularyzacji L2
             self.weights_hidden_output += hidden_layer_output.T.dot(output_delta) * learning_rate
             self.bias_output += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
             self.weights_input_hidden += inputs.T.dot(hidden_delta) * learning_rate
             self.bias_hidden += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
+
+            # Regularyzacja L2 - zmniejszenie wag proporcjonalnie do ich wartości
+            self.weights_hidden_output -= self.lambda_reg * self.weights_hidden_output
+            self.weights_input_hidden -= self.lambda_reg * self.weights_input_hidden
+
 
     def predict(self, input):
         # Przewidywanie na podstawie danych wejściowych
@@ -117,6 +134,17 @@ drawing_area_rect = pygame.Rect(0, 0, width, height - 200)
 # Konwertuj dane na numpy array
 data_array = np.array(data, dtype=int)
 
+# Przetasowanie indeksów wierszy
+num_rows = data_array.shape[0]
+shuffled_indices = np.random.permutation(num_rows)
+
+# Użyj przetasowanych indeksów, aby przetasować wiersze w data_array
+shuffled_data_array = data_array[shuffled_indices]
+
+# Ustawienie wartości data_array na nową z losową kolejnością wierszy
+data_array = shuffled_data_array
+
+
 # Pierwsza kolumna zawiera numer próby, druga kolumna zawiera wartość docelową
 targets = data_array[:, 1]
 
@@ -124,7 +152,7 @@ targets = data_array[:, 1]
 inputs = data_array[:, 2:]
 
 # Normalizuj dane wejściowe (opcjonalne)
-inputs = inputs / 255.0
+# inputs = inputs / 255.0
 
 # Wymiary danych treningowych
 num_samples = inputs.shape
@@ -147,7 +175,7 @@ input_size = 64  # Liczba pikseli
 hidden_size = 32  # Liczba neuronów w warstwie ukrytej
 output_size = 10  # Liczba możliwych cyfr od 0 do 9
 learning_rate = 0.01
-epochs = 10000
+epochs = 100000
 
 # Teraz możesz użyć inputs i target_matrix jako dane do trenowania sieci neuronowej
 # Utwórz instancję sieci neuronowej
